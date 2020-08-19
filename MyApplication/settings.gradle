@@ -1,0 +1,3 @@
+include ':app'
+include ':mpp-library'
+rootProject.name = "My Application"

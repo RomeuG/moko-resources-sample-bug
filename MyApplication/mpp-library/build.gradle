@@ -1,0 +1,131 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.native.cocoapods'
+apply plugin: "dev.icerock.mobile.multiplatform-resources"
+
+android {
+    compileSdkVersion 28
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 28
+    }
+
+    sourceSets {
+        main {
+            setRoot('src/androidMain')
+        }
+        release {
+            setRoot('src/androidMainRelease')
+        }
+        debug {
+            setRoot('src/androidMainDebug')
+        }
+        test {
+            setRoot('src/androidUnitTest')
+        }
+        testRelease {
+            setRoot('src/androidUnitTestRelease')
+        }
+        testDebug {
+            setRoot('src/androidUnitTestDebug')
+        }
+    }
+}
+
+kotlin {
+
+    version = "0.0.1"
+
+    android()
+
+    // ios
+    if (project.findProperty("kotlin.native.cocoapods.target") == "ios_arm") {
+        iosArm64('ios') {
+            binaries {
+                framework('Common') {
+                    freeCompilerArgs += "-Xobjc-generics"
+                }
+            }
+        }
+    } else {
+        iosX64('ios') {
+            binaries {
+                framework('Common') {
+                    freeCompilerArgs += "-Xobjc-generics"
+                }
+            }
+        }
+    }
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+                // resources
+                implementation "dev.icerock.moko:graphics:0.3.0"
+                implementation "dev.icerock.moko:resources:$moko_resources_version"
+            }
+        }
+
+        androidMain {
+            dependencies {
+                implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+            }
+        }
+
+        iosMain {
+            dependencies {
+                implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+            }
+        }
+
+//        iosArm32Main {
+//            dependsOn iosMain
+//        }
+
+        iosArm64Main {
+            dependsOn iosMain
+
+                    dependencies {
+                        // resources
+                        implementation "dev.icerock.moko:graphics-iosarm64:0.3.0"
+                        implementation "dev.icerock.moko:resources-iosarm64:$moko_resources_version"
+                    }
+        }
+    }
+
+    cocoapods {
+        //version = "0.1.0" // Defaults to "1.0.0-LOCAL"
+        homepage = "www.example.com"  // Default to empty
+        summary = "..." // Defaults to empty
+        frameworkName = "testsdk"
+    }
+
+}
+
+// ios task
+task packForXcode {
+    def buildType = project.findProperty("kotlin.build.type") ?: "DEBUG"
+    def target = project.findProperty("kotlin.target") ?: "ios"
+    def framework = kotlin.targets."$target".compilations
+    .main.target.binaries.findFramework("Common", buildType)
+
+    dependsOn framework.linkTask
+
+            doLast {
+                copy {
+                    from framework.outputFile.parent
+                            into framework.outputFile.parentFile
+                            include 'data.framework/**'
+                    include 'data.framework.dSYM'
+                }
+            }
+}
+
+multiplatformResources {
+    multiplatformResourcesPackage = "com.example.myapplication.sdk"
+    //iosBaseLocalizationRegion = "en" //optional, default "en"
+    //multiplatformResourcesSourceSet = "commonClientMain"  // optional, default "commonMain"
+}
